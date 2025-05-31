@@ -4,37 +4,13 @@ import uuid
 from datetime import datetime
 from typing import Optional, Dict, Any
 import streamlit as st
+from .database import DatabaseManager
 
 class AuthManager:
     """Handles user authentication and account management"""
     
     def __init__(self):
-        self.users_file = "data/users.json"
-        self._ensure_data_directory()
-        self._load_users()
-    
-    def _ensure_data_directory(self):
-        """Create data directory if it doesn't exist"""
-        import os
-        if not os.path.exists("data"):
-            os.makedirs("data")
-    
-    def _load_users(self):
-        """Load users from JSON file"""
-        try:
-            with open(self.users_file, 'r') as f:
-                self.users = json.load(f)
-        except FileNotFoundError:
-            self.users = {}
-            self._save_users()
-    
-    def _save_users(self):
-        """Save users to JSON file"""
-        try:
-            with open(self.users_file, 'w') as f:
-                json.dump(self.users, f, indent=2, default=str)
-        except Exception as e:
-            st.error(f"Error saving user data: {str(e)}")
+        self.db = DatabaseManager()
     
     def _hash_password(self, password: str) -> str:
         """Hash password using SHA-256"""
@@ -44,7 +20,8 @@ class AuthManager:
         """Create a new user account"""
         try:
             # Check if username already exists
-            if username in self.users:
+            existing_user = self.db.get_user_by_username(username)
+            if existing_user:
                 return None
             
             user_id = str(uuid.uuid4())
@@ -55,19 +32,31 @@ class AuthManager:
                 'username': username,
                 'email': email,
                 'password_hash': hashed_password,
-                'preferences': preferences,
-                'created_at': datetime.now().isoformat(),
-                'last_login': None,
-                'is_active': True
+                'preferences': json.dumps(preferences)
             }
             
-            self.users[username] = user_data
-            self._save_users()
+            if self.db.create_user(user_data):
+                # Initialize user stats
+                stats = {
+                    'total_points': 0,
+                    'current_level': 1,
+                    'streak_days': 0,
+                    'time_studied_today': 0,
+                    'daily_goal_minutes': preferences.get('daily_goal_minutes', 30),
+                    'last_activity_date': datetime.now().date(),
+                    'total_study_time': 0
+                }
+                self.db.update_user_stats(user_id, stats)
+                
+                # Return user data without password hash
+                return {
+                    'user_id': user_id,
+                    'username': username,
+                    'email': email,
+                    'preferences': preferences
+                }
             
-            # Return user data without password hash
-            user_return = user_data.copy()
-            del user_return['password_hash']
-            return user_return
+            return None
             
         except Exception as e:
             st.error(f"Error creating user: {str(e)}")
@@ -76,22 +65,31 @@ class AuthManager:
     def authenticate_user(self, username: str, password: str) -> Optional[Dict[str, Any]]:
         """Authenticate user with username and password"""
         try:
-            if username not in self.users:
+            user_data = self.db.get_user_by_username(username)
+            if not user_data:
                 return None
             
-            user_data = self.users[username]
             hashed_password = self._hash_password(password)
             
             if user_data['password_hash'] == hashed_password and user_data['is_active']:
                 # Update last login
-                user_data['last_login'] = datetime.now().isoformat()
-                self.users[username] = user_data
-                self._save_users()
+                self.db.update_user_login(username)
+                
+                # Parse preferences from JSON
+                preferences = {}
+                if user_data.get('preferences'):
+                    try:
+                        preferences = json.loads(user_data['preferences'])
+                    except:
+                        preferences = {}
                 
                 # Return user data without password hash
-                user_return = user_data.copy()
-                del user_return['password_hash']
-                return user_return
+                return {
+                    'user_id': user_data['user_id'],
+                    'username': user_data['username'],
+                    'email': user_data['email'],
+                    'preferences': preferences
+                }
             
             return None
             
@@ -102,14 +100,7 @@ class AuthManager:
     def update_user_preferences(self, user_id: str, preferences: Dict[str, Any]) -> bool:
         """Update user learning preferences"""
         try:
-            for username, user_data in self.users.items():
-                if user_data['user_id'] == user_id:
-                    user_data['preferences'] = preferences
-                    user_data['updated_at'] = datetime.now().isoformat()
-                    self.users[username] = user_data
-                    self._save_users()
-                    return True
-            return False
+            return self.db.update_user_preferences(user_id, preferences)
             
         except Exception as e:
             st.error(f"Error updating preferences: {str(e)}")
@@ -118,24 +109,26 @@ class AuthManager:
     def update_user_account(self, user_id: str, email: str, current_password: str, new_password: str = None) -> bool:
         """Update user account information"""
         try:
-            for username, user_data in self.users.items():
-                if user_data['user_id'] == user_id:
-                    # Verify current password
-                    if self._hash_password(current_password) != user_data['password_hash']:
-                        return False
-                    
-                    # Update email
-                    user_data['email'] = email
-                    
-                    # Update password if provided
-                    if new_password:
-                        user_data['password_hash'] = self._hash_password(new_password)
-                    
-                    user_data['updated_at'] = datetime.now().isoformat()
-                    self.users[username] = user_data
-                    self._save_users()
-                    return True
-            return False
+            user_data = self.db.get_user_by_id(user_id)
+            if not user_data:
+                return False
+            
+            # Verify current password
+            if self._hash_password(current_password) != user_data['password_hash']:
+                return False
+            
+            # Update email
+            query = "UPDATE users SET email = :email"
+            params = {"email": email, "user_id": user_id}
+            
+            # Update password if provided
+            if new_password:
+                query += ", password_hash = :password_hash"
+                params["password_hash"] = self._hash_password(new_password)
+            
+            query += " WHERE user_id = :user_id"
+            
+            return self.db.execute_update(query, params)
             
         except Exception as e:
             st.error(f"Error updating account: {str(e)}")
@@ -144,52 +137,24 @@ class AuthManager:
     def get_user_by_id(self, user_id: str) -> Optional[Dict[str, Any]]:
         """Get user data by user ID"""
         try:
-            for user_data in self.users.values():
-                if user_data['user_id'] == user_id:
-                    user_return = user_data.copy()
-                    del user_return['password_hash']
-                    return user_return
+            user_data = self.db.get_user_by_id(user_id)
+            if user_data:
+                # Parse preferences and remove password hash
+                preferences = {}
+                if user_data.get('preferences'):
+                    try:
+                        preferences = json.loads(user_data['preferences'])
+                    except:
+                        preferences = {}
+                
+                return {
+                    'user_id': user_data['user_id'],
+                    'username': user_data['username'],
+                    'email': user_data['email'],
+                    'preferences': preferences
+                }
             return None
             
         except Exception as e:
             st.error(f"Error retrieving user: {str(e)}")
             return None
-    
-    def deactivate_user(self, user_id: str) -> bool:
-        """Deactivate a user account"""
-        try:
-            for username, user_data in self.users.items():
-                if user_data['user_id'] == user_id:
-                    user_data['is_active'] = False
-                    user_data['deactivated_at'] = datetime.now().isoformat()
-                    self.users[username] = user_data
-                    self._save_users()
-                    return True
-            return False
-            
-        except Exception as e:
-            st.error(f"Error deactivating user: {str(e)}")
-            return False
-    
-    def get_all_users_stats(self) -> Dict[str, Any]:
-        """Get overall user statistics"""
-        try:
-            total_users = len(self.users)
-            active_users = sum(1 for user in self.users.values() if user.get('is_active', True))
-            
-            # Count users by learning style
-            learning_styles = {}
-            for user in self.users.values():
-                style = user.get('preferences', {}).get('learning_style', 'Unknown')
-                learning_styles[style] = learning_styles.get(style, 0) + 1
-            
-            return {
-                'total_users': total_users,
-                'active_users': active_users,
-                'learning_styles_distribution': learning_styles,
-                'registration_dates': [user.get('created_at') for user in self.users.values()]
-            }
-            
-        except Exception as e:
-            st.error(f"Error getting user statistics: {str(e)}")
-            return {}

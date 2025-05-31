@@ -3,56 +3,22 @@ import uuid
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 import streamlit as st
+from .database import DatabaseManager
 
 class CourseManager:
     """Handles course creation, management, and enrollment"""
     
     def __init__(self):
-        self.courses_file = "data/courses.json"
-        self.enrollments_file = "data/enrollments.json"
-        self._ensure_data_directory()
-        self._load_data()
+        self.db = DatabaseManager()
         self._initialize_sample_courses()
-    
-    def _ensure_data_directory(self):
-        """Create data directory if it doesn't exist"""
-        import os
-        if not os.path.exists("data"):
-            os.makedirs("data")
-    
-    def _load_data(self):
-        """Load courses and enrollments from JSON files"""
-        try:
-            with open(self.courses_file, 'r') as f:
-                self.courses = json.load(f)
-        except FileNotFoundError:
-            self.courses = {}
-            
-        try:
-            with open(self.enrollments_file, 'r') as f:
-                self.enrollments = json.load(f)
-        except FileNotFoundError:
-            self.enrollments = {}
-    
-    def _save_courses(self):
-        """Save courses to JSON file"""
-        try:
-            with open(self.courses_file, 'w') as f:
-                json.dump(self.courses, f, indent=2, default=str)
-        except Exception as e:
-            st.error(f"Error saving courses: {str(e)}")
-    
-    def _save_enrollments(self):
-        """Save enrollments to JSON file"""
-        try:
-            with open(self.enrollments_file, 'w') as f:
-                json.dump(self.enrollments, f, indent=2, default=str)
-        except Exception as e:
-            st.error(f"Error saving enrollments: {str(e)}")
     
     def _initialize_sample_courses(self):
         """Initialize with sample courses if none exist"""
-        if not self.courses:
+        existing_courses = self.db.get_all_courses()
+        if existing_courses:
+            return
+        
+        # No sample courses needed since we initialized via script
             sample_courses = [
                 {
                     'course_id': str(uuid.uuid4()),
@@ -208,80 +174,59 @@ class CourseManager:
     
     def get_course(self, course_id: str) -> Optional[Dict[str, Any]]:
         """Get course by ID"""
-        return self.courses.get(course_id)
+        course = self.db.get_course_by_id(course_id)
+        if course and course.get('lessons'):
+            try:
+                course['lessons'] = json.loads(course['lessons'])
+            except:
+                course['lessons'] = []
+        return course
     
     def get_all_courses(self) -> List[Dict[str, Any]]:
         """Get all courses"""
-        return list(self.courses.values())
+        courses = self.db.get_all_courses()
+        for course in courses:
+            if course.get('lessons'):
+                try:
+                    course['lessons'] = json.loads(course['lessons'])
+                except:
+                    course['lessons'] = []
+        return courses
     
     def get_categories(self) -> List[str]:
         """Get all course categories"""
-        categories = set()
-        for course in self.courses.values():
-            categories.add(course['category'])
-        return sorted(list(categories))
+        return self.db.get_course_categories()
     
     def search_courses(self, query: str = "", category: str = "All", difficulty: str = "All") -> List[Dict[str, Any]]:
         """Search courses with filters"""
-        filtered_courses = []
-        
-        for course in self.courses.values():
-            # Filter by category
-            if category != "All" and course['category'] != category:
-                continue
-            
-            # Filter by difficulty
-            if difficulty != "All" and course['difficulty'] != difficulty:
-                continue
-            
-            # Filter by search query
-            if query:
-                query_lower = query.lower()
-                if not (query_lower in course['title'].lower() or 
-                       query_lower in course['description'].lower() or
-                       any(query_lower in tag.lower() for tag in course.get('tags', []))):
-                    continue
-            
-            filtered_courses.append(course)
-        
-        # Sort by rating (highest first)
-        filtered_courses.sort(key=lambda x: x.get('rating', 0), reverse=True)
-        return filtered_courses
+        courses = self.db.search_courses(query, category, difficulty)
+        for course in courses:
+            if course.get('lessons'):
+                try:
+                    course['lessons'] = json.loads(course['lessons'])
+                except:
+                    course['lessons'] = []
+        return courses
     
     def get_course_lessons(self, course_id: str) -> List[Dict[str, Any]]:
         """Get lessons for a specific course"""
-        course = self.courses.get(course_id)
+        course = self.get_course(course_id)
         if course:
             return course.get('lessons', [])
         return []
     
     def enroll_user(self, user_id: str, course_id: str) -> bool:
         """Enroll a user in a course"""
-        try:
-            if user_id not in self.enrollments:
-                self.enrollments[user_id] = []
-            
-            # Check if already enrolled
-            if course_id in self.enrollments[user_id]:
-                return False
-            
-            # Add enrollment
-            self.enrollments[user_id].append(course_id)
-            self._save_enrollments()
-            return True
-            
-        except Exception as e:
-            st.error(f"Error enrolling user: {str(e)}")
-            return False
+        return self.db.enroll_user(user_id, course_id)
     
     def get_user_enrollments(self, user_id: str) -> List[str]:
         """Get all courses a user is enrolled in"""
-        return self.enrollments.get(user_id, [])
+        return self.db.get_user_enrollments(user_id)
     
     def is_user_enrolled(self, user_id: str, course_id: str) -> bool:
         """Check if user is enrolled in a course"""
-        user_enrollments = self.enrollments.get(user_id, [])
-        return course_id in user_enrollments
+        enrollments = self.db.get_user_enrollments(user_id)
+        return course_id in enrollments
     
     def get_course_stats(self, course_id: str) -> Dict[str, Any]:
         """Get statistics for a course"""
