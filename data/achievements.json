@@ -1,0 +1,35 @@
+{
+  "definitions": {
+    "first_course": {
+      "title": "Getting Started",
+      "description": "Enrolled in your first course",
+      "icon": "\ud83c\udfaf",
+      "points": 50
+    },
+    "first_completion": {
+      "title": "Course Completer",
+      "description": "Completed your first course",
+      "icon": "\ud83c\udfc6",
+      "points": 100
+    },
+    "week_streak": {
+      "title": "Week Warrior",
+      "description": "Studied for 7 consecutive days",
+      "icon": "\ud83d\udd25",
+      "points": 150
+    },
+    "quiz_master": {
+      "title": "Quiz Master",
+      "description": "Scored 90% or higher on 5 quizzes",
+      "icon": "\ud83e\udde0",
+      "points": 200
+    },
+    "speed_learner": {
+      "title": "Speed Learner",
+      "description": "Completed 3 courses in a month",
+      "icon": "\u26a1",
+      "points": 300
+    }
+  },
+  "user_achievements": {}
+}

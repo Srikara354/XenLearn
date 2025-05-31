@@ -1,390 +1,736 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import plotly.express as px
-import plotly.graph_objects as go
-from utils.data_processor import DataProcessor
-from utils.chart_generator import ChartGenerator
-from utils.export_manager import ExportManager
-import io
-import base64
-from urllib.parse import urlencode
+from datetime import datetime, timedelta
+import json
+import hashlib
+from utils.auth_manager import AuthManager
+from utils.course_manager import CourseManager
+from utils.ai_engine import AIEngine
+from utils.progress_tracker import ProgressTracker
+from utils.quiz_generator import QuizGenerator
 
 # Configure page
 st.set_page_config(
-    page_title="Team Data Explorer",
-    page_icon="📊",
+    page_title="EduLearn AI",
+    page_icon="🎓",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
 # Initialize session state
-if 'data' not in st.session_state:
-    st.session_state.data = None
-if 'filtered_data' not in st.session_state:
-    st.session_state.filtered_data = None
-if 'chart_config' not in st.session_state:
-    st.session_state.chart_config = {}
+if 'user' not in st.session_state:
+    st.session_state.user = None
+if 'current_course' not in st.session_state:
+    st.session_state.current_course = None
+if 'learning_preferences' not in st.session_state:
+    st.session_state.learning_preferences = {}
+if 'user_progress' not in st.session_state:
+    st.session_state.user_progress = {}
 
 def main():
-    st.title("📊 Team Data Explorer")
-    st.markdown("**Mobile-friendly data analysis and visualization tool for teams**")
+    # Initialize managers
+    auth_manager = AuthManager()
+    course_manager = CourseManager()
+    ai_engine = AIEngine()
+    progress_tracker = ProgressTracker()
+    quiz_generator = QuizGenerator()
     
-    # Initialize utilities
-    data_processor = DataProcessor()
-    chart_generator = ChartGenerator()
-    export_manager = ExportManager()
+    # Check authentication
+    if st.session_state.user is None:
+        show_auth_page(auth_manager)
+    else:
+        show_main_app(course_manager, ai_engine, progress_tracker, quiz_generator, auth_manager)
+
+def show_auth_page(auth_manager):
+    """Display authentication page"""
+    st.title("🎓 EduLearn AI")
+    st.markdown("**Personalized Learning Platform with AI-Powered Recommendations**")
     
-    # Sidebar for file upload and basic controls
-    with st.sidebar:
-        st.header("📁 Data Upload")
+    col1, col2, col3 = st.columns([1, 2, 1])
+    
+    with col2:
+        tab1, tab2 = st.tabs(["Login", "Sign Up"])
         
-        # File upload
-        uploaded_file = st.file_uploader(
-            "Choose a file",
-            type=['csv', 'xlsx', 'xls'],
-            help="Upload CSV or Excel files for analysis"
+        with tab1:
+            st.subheader("Login to Your Account")
+            
+            username = st.text_input("Username", key="login_username")
+            password = st.text_input("Password", type="password", key="login_password")
+            
+            if st.button("Login", type="primary", use_container_width=True):
+                user = auth_manager.authenticate_user(username, password)
+                if user:
+                    st.session_state.user = user
+                    st.session_state.learning_preferences = user.get('preferences', {})
+                    st.success("Login successful!")
+                    st.rerun()
+                else:
+                    st.error("Invalid username or password")
+        
+        with tab2:
+            st.subheader("Create New Account")
+            
+            new_username = st.text_input("Choose Username", key="signup_username")
+            new_email = st.text_input("Email Address", key="signup_email")
+            new_password = st.text_input("Create Password", type="password", key="signup_password")
+            confirm_password = st.text_input("Confirm Password", type="password", key="confirm_password")
+            
+            # Learning preferences setup
+            st.write("**Learning Preferences:**")
+            
+            col_a, col_b = st.columns(2)
+            with col_a:
+                learning_style = st.selectbox(
+                    "Learning Style",
+                    ["Visual", "Auditory", "Kinesthetic", "Reading/Writing"],
+                    key="signup_style"
+                )
+                difficulty_preference = st.selectbox(
+                    "Preferred Difficulty",
+                    ["Beginner", "Intermediate", "Advanced", "Mixed"],
+                    key="signup_difficulty"
+                )
+            
+            with col_b:
+                study_time = st.selectbox(
+                    "Daily Study Time",
+                    ["15-30 minutes", "30-60 minutes", "1-2 hours", "2+ hours"],
+                    key="signup_time"
+                )
+                interests = st.multiselect(
+                    "Subject Interests",
+                    ["Technology", "Science", "Mathematics", "Languages", "Business", "Arts", "History"],
+                    key="signup_interests"
+                )
+            
+            if st.button("Create Account", type="primary", use_container_width=True):
+                if new_password != confirm_password:
+                    st.error("Passwords do not match")
+                elif len(new_password) < 6:
+                    st.error("Password must be at least 6 characters")
+                elif not new_username or not new_email:
+                    st.error("Please fill in all required fields")
+                else:
+                    preferences = {
+                        'learning_style': learning_style,
+                        'difficulty_preference': difficulty_preference,
+                        'study_time': study_time,
+                        'interests': interests
+                    }
+                    
+                    user = auth_manager.create_user(new_username, new_email, new_password, preferences)
+                    if user:
+                        st.session_state.user = user
+                        st.session_state.learning_preferences = preferences
+                        st.success("Account created successfully!")
+                        st.rerun()
+                    else:
+                        st.error("Username already exists")
+
+def show_main_app(course_manager, ai_engine, progress_tracker, quiz_generator, auth_manager):
+    """Display main application interface"""
+    user = st.session_state.user
+    
+    # Sidebar
+    with st.sidebar:
+        st.title(f"Welcome, {user['username']}!")
+        
+        # Navigation
+        page = st.selectbox(
+            "Navigate",
+            ["Dashboard", "Browse Courses", "My Learning", "AI Recommendations", "Quizzes", "Progress", "Settings"]
         )
         
-        if uploaded_file is not None:
-            try:
-                with st.spinner("Loading data..."):
-                    st.session_state.data = data_processor.load_file(uploaded_file)
-                    st.session_state.filtered_data = st.session_state.data.copy()
-                st.success(f"✅ Loaded {len(st.session_state.data)} rows")
-            except Exception as e:
-                st.error(f"❌ Error loading file: {str(e)}")
-                st.session_state.data = None
+        st.divider()
         
-        # Show data info if available
-        if st.session_state.data is not None:
-            st.subheader("📋 Dataset Info")
-            st.write(f"**Rows:** {len(st.session_state.data):,}")
-            st.write(f"**Columns:** {len(st.session_state.data.columns)}")
-            st.write(f"**Size:** {st.session_state.data.memory_usage(deep=True).sum() / 1024:.1f} KB")
+        # Quick stats
+        user_progress = progress_tracker.get_user_progress(user['user_id'])
+        st.metric("Courses Enrolled", len(user_progress.get('enrolled_courses', [])))
+        st.metric("Completed Lessons", user_progress.get('completed_lessons', 0))
+        st.metric("Learning Streak", user_progress.get('streak_days', 0))
+        
+        st.divider()
+        
+        if st.button("Logout", type="secondary"):
+            st.session_state.user = None
+            st.session_state.current_course = None
+            st.rerun()
     
     # Main content area
-    if st.session_state.data is None:
-        # Welcome screen
-        col1, col2, col3 = st.columns([1, 2, 1])
-        with col2:
-            st.markdown("""
-            ### 🚀 Get Started
-            
-            Upload a CSV or Excel file using the sidebar to begin your data analysis journey.
-            
-            **Features:**
-            - 📱 Mobile-friendly interface
-            - 🔍 Interactive data exploration
-            - 📊 Multiple visualization types
-            - 🔗 Shareable visualization links
-            - 📈 Statistical analysis
-            - 💾 Export capabilities
-            """)
-    else:
-        # Data analysis interface
-        tabs = st.tabs(["🔍 Explore", "📊 Visualize", "📈 Analyze", "🔗 Share"])
-        
-        with tabs[0]:  # Explore tab
-            explore_data(data_processor)
-        
-        with tabs[1]:  # Visualize tab
-            create_visualizations(chart_generator)
-        
-        with tabs[2]:  # Analyze tab
-            statistical_analysis(data_processor)
-        
-        with tabs[3]:  # Share tab
-            share_visualizations(export_manager)
+    if page == "Dashboard":
+        show_dashboard(course_manager, ai_engine, progress_tracker)
+    elif page == "Browse Courses":
+        show_course_browser(course_manager, ai_engine)
+    elif page == "My Learning":
+        show_my_learning(course_manager, progress_tracker)
+    elif page == "AI Recommendations":
+        show_ai_recommendations(ai_engine, course_manager)
+    elif page == "Quizzes":
+        show_quizzes(quiz_generator, course_manager)
+    elif page == "Progress":
+        show_progress_tracking(progress_tracker)
+    elif page == "Settings":
+        show_settings(auth_manager)
 
-def explore_data(data_processor):
-    """Data exploration interface"""
-    st.subheader("🔍 Data Exploration")
+def show_dashboard(course_manager, ai_engine, progress_tracker):
+    """Display user dashboard"""
+    st.title("📊 Your Learning Dashboard")
     
-    # Data filtering controls
+    user = st.session_state.user
+    user_progress = progress_tracker.get_user_progress(user['user_id'])
+    
+    # Welcome message and daily goal
+    col1, col2, col3 = st.columns([2, 1, 1])
+    
+    with col1:
+        st.markdown(f"### Good day, {user['username']}! 👋")
+        daily_goal = user_progress.get('daily_goal_minutes', 30)
+        time_today = user_progress.get('time_studied_today', 0)
+        
+        progress_pct = min(time_today / daily_goal * 100, 100) if daily_goal > 0 else 0
+        st.progress(progress_pct / 100)
+        st.write(f"Daily Goal: {time_today}/{daily_goal} minutes ({progress_pct:.0f}%)")
+    
+    with col2:
+        st.metric("Total Points", user_progress.get('total_points', 0))
+    
+    with col3:
+        st.metric("Current Level", user_progress.get('level', 1))
+    
+    # Recent activity and recommendations
     col1, col2 = st.columns([1, 1])
     
     with col1:
-        # Column selection
-        all_columns = st.session_state.data.columns.tolist()
-        selected_columns = st.multiselect(
-            "Select columns to display",
-            all_columns,
-            default=all_columns[:5] if len(all_columns) > 5 else all_columns,
-            help="Choose which columns to show in the data preview"
-        )
+        st.subheader("🔥 Continue Learning")
+        
+        enrolled_courses = user_progress.get('enrolled_courses', [])
+        if enrolled_courses:
+            for course_id in enrolled_courses[:3]:
+                course = course_manager.get_course(course_id)
+                if course:
+                    with st.container():
+                        st.write(f"**{course['title']}**")
+                        course_progress = user_progress.get('course_progress', {}).get(course_id, 0)
+                        st.progress(course_progress / 100)
+                        st.write(f"Progress: {course_progress}%")
+                        
+                        if st.button(f"Continue", key=f"continue_{course_id}"):
+                            st.session_state.current_course = course_id
+                            st.rerun()
+        else:
+            st.info("No courses enrolled yet. Browse courses to get started!")
     
     with col2:
-        # Row limit for mobile performance
-        row_limit = st.selectbox(
-            "Rows to display",
-            [50, 100, 500, 1000],
-            index=0,
-            help="Limit rows for better mobile performance"
-        )
-    
-    # Apply column filtering
-    if selected_columns:
-        display_data = st.session_state.data[selected_columns].head(row_limit)
-    else:
-        display_data = st.session_state.data.head(row_limit)
-    
-    # Advanced filtering
-    with st.expander("🔧 Advanced Filters"):
-        filter_column = st.selectbox("Filter by column", [None] + all_columns)
+        st.subheader("🤖 AI Recommendations")
         
-        if filter_column:
-            col_type = st.session_state.data[filter_column].dtype
-            
-            if col_type in ['object', 'string']:
-                # String filtering
-                unique_values = st.session_state.data[filter_column].unique()
-                selected_values = st.multiselect(
-                    f"Select values for {filter_column}",
-                    unique_values
-                )
-                if selected_values:
-                    display_data = display_data[display_data[filter_column].isin(selected_values)]
-            
-            elif col_type in ['int64', 'float64']:
-                # Numeric filtering
-                min_val = float(st.session_state.data[filter_column].min())
-                max_val = float(st.session_state.data[filter_column].max())
-                
-                selected_range = st.slider(
-                    f"Range for {filter_column}",
-                    min_val, max_val, (min_val, max_val)
-                )
-                display_data = display_data[
-                    (display_data[filter_column] >= selected_range[0]) &
-                    (display_data[filter_column] <= selected_range[1])
-                ]
-    
-    # Update filtered data in session state
-    st.session_state.filtered_data = display_data
-    
-    # Display data
-    st.dataframe(
-        display_data,
-        use_container_width=True,
-        height=400
-    )
-    
-    # Quick stats
-    if not display_data.empty:
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            st.metric("Total Rows", len(display_data))
-        with col2:
-            st.metric("Columns", len(display_data.columns))
-        with col3:
-            numeric_cols = len(display_data.select_dtypes(include=[np.number]).columns)
-            st.metric("Numeric Cols", numeric_cols)
-        with col4:
-            missing_values = display_data.isnull().sum().sum()
-            st.metric("Missing Values", missing_values)
-
-def create_visualizations(chart_generator):
-    """Visualization creation interface"""
-    st.subheader("📊 Create Visualizations")
-    
-    if st.session_state.filtered_data is None or st.session_state.filtered_data.empty:
-        st.warning("No data available. Please load and explore data first.")
-        return
-    
-    data = st.session_state.filtered_data
-    numeric_cols = data.select_dtypes(include=[np.number]).columns.tolist()
-    categorical_cols = data.select_dtypes(include=['object', 'string']).columns.tolist()
-    
-    # Chart configuration
-    col1, col2 = st.columns([1, 1])
-    
-    with col1:
-        chart_type = st.selectbox(
-            "Chart Type",
-            ["Scatter Plot", "Line Chart", "Bar Chart", "Histogram", "Box Plot", "Heatmap", "Pie Chart"],
-            help="Select the type of visualization"
-        )
-    
-    with col2:
-        if chart_type in ["Scatter Plot", "Line Chart"]:
-            x_axis = st.selectbox("X-axis", numeric_cols + categorical_cols)
-            y_axis = st.selectbox("Y-axis", numeric_cols)
-        elif chart_type == "Bar Chart":
-            x_axis = st.selectbox("Category", categorical_cols)
-            y_axis = st.selectbox("Value", numeric_cols)
-        elif chart_type == "Histogram":
-            x_axis = st.selectbox("Column", numeric_cols)
-            y_axis = None
-        elif chart_type == "Box Plot":
-            x_axis = st.selectbox("Category (optional)", [None] + categorical_cols)
-            y_axis = st.selectbox("Value", numeric_cols)
-        elif chart_type == "Heatmap":
-            x_axis = None
-            y_axis = None
-        elif chart_type == "Pie Chart":
-            x_axis = st.selectbox("Category", categorical_cols)
-            y_axis = st.selectbox("Value (optional)", [None] + numeric_cols)
-    
-    # Additional options
-    with st.expander("🎨 Chart Options"):
-        color_column = st.selectbox("Color by", [None] + categorical_cols + numeric_cols)
-        title = st.text_input("Chart Title", value=f"{chart_type} - {x_axis or 'Data'}")
-        
-        # Size options for mobile
-        chart_height = st.slider("Chart Height", 300, 800, 500)
-    
-    # Generate chart
-    try:
-        fig = chart_generator.create_chart(
-            data, chart_type, x_axis, y_axis, color_column, title, chart_height
+        # Get AI recommendations
+        recommendations = ai_engine.get_personalized_recommendations(
+            user['user_id'], 
+            st.session_state.learning_preferences
         )
         
-        if fig:
-            st.plotly_chart(fig, use_container_width=True, height=chart_height)
-            
-            # Store chart config for sharing
-            st.session_state.chart_config = {
-                'type': chart_type,
-                'x_axis': x_axis,
-                'y_axis': y_axis,
-                'color_column': color_column,
-                'title': title,
-                'height': chart_height
-            }
-    except Exception as e:
-        st.error(f"Error creating chart: {str(e)}")
-
-def statistical_analysis(data_processor):
-    """Statistical analysis interface"""
-    st.subheader("📈 Statistical Analysis")
-    
-    if st.session_state.filtered_data is None or st.session_state.filtered_data.empty:
-        st.warning("No data available. Please load and explore data first.")
-        return
-    
-    data = st.session_state.filtered_data
-    
-    # Summary statistics
-    st.write("### 📊 Summary Statistics")
-    
-    numeric_data = data.select_dtypes(include=[np.number])
-    if not numeric_data.empty:
-        summary_stats = data_processor.get_summary_statistics(numeric_data)
-        st.dataframe(summary_stats, use_container_width=True)
-    else:
-        st.info("No numeric columns available for statistical analysis.")
-    
-    # Correlation analysis
-    if len(numeric_data.columns) > 1:
-        st.write("### 🔗 Correlation Analysis")
-        
-        corr_matrix = numeric_data.corr()
-        
-        # Create correlation heatmap
-        fig = px.imshow(
-            corr_matrix,
-            text_auto=True,
-            aspect="auto",
-            title="Correlation Matrix",
-            color_continuous_scale="RdBu_r"
-        )
-        fig.update_layout(height=500)
-        st.plotly_chart(fig, use_container_width=True)
-    
-    # Data quality report
-    st.write("### 🧹 Data Quality Report")
-    
-    quality_report = data_processor.get_data_quality_report(data)
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        st.write("**Missing Values by Column:**")
-        missing_data = pd.DataFrame({
-            'Column': quality_report['missing_values'].index,
-            'Missing Count': quality_report['missing_values'].values,
-            'Missing %': (quality_report['missing_values'].values / len(data) * 100).round(2)
-        })
-        st.dataframe(missing_data, use_container_width=True)
-    
-    with col2:
-        st.write("**Data Types:**")
-        dtypes_df = pd.DataFrame({
-            'Column': data.dtypes.index,
-            'Data Type': data.dtypes.values
-        })
-        st.dataframe(dtypes_df, use_container_width=True)
-
-def share_visualizations(export_manager):
-    """Sharing and export interface"""
-    st.subheader("🔗 Share & Export")
-    
-    if not st.session_state.chart_config:
-        st.warning("Create a visualization first to enable sharing options.")
-        return
-    
-    # Shareable link generation
-    st.write("### 🔗 Shareable Link")
-    
-    # Generate a shareable URL with chart configuration
-    chart_params = urlencode(st.session_state.chart_config)
-    shareable_url = f"{st.get_option('browser.serverAddress')}:{st.get_option('server.port')}?{chart_params}"
-    
-    st.code(shareable_url, language=None)
-    
-    if st.button("📋 Copy Link to Clipboard"):
-        st.success("Link ready to copy! (Copy from the text box above)")
-    
-    # Export options
-    st.write("### 💾 Export Options")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        if st.button("📊 Export Chart as HTML"):
-            if st.session_state.filtered_data is not None:
-                try:
-                    chart_generator = ChartGenerator()
-                    fig = chart_generator.create_chart(
-                        st.session_state.filtered_data,
-                        st.session_state.chart_config['type'],
-                        st.session_state.chart_config['x_axis'],
-                        st.session_state.chart_config['y_axis'],
-                        st.session_state.chart_config['color_column'],
-                        st.session_state.chart_config['title'],
-                        st.session_state.chart_config['height']
-                    )
+        for rec in recommendations[:3]:
+            course = course_manager.get_course(rec['course_id'])
+            if course:
+                with st.container():
+                    st.write(f"**{course['title']}**")
+                    st.write(f"Match: {rec['confidence']:.0%}")
+                    st.write(course['description'][:100] + "...")
                     
-                    html_string = fig.to_html()
-                    st.download_button(
-                        label="💾 Download HTML",
-                        data=html_string,
-                        file_name=f"chart_{st.session_state.chart_config['type'].lower().replace(' ', '_')}.html",
-                        mime="text/html"
-                    )
-                except Exception as e:
-                    st.error(f"Error exporting chart: {str(e)}")
+                    if st.button(f"View Course", key=f"view_{course['course_id']}"):
+                        st.session_state.current_course = course['course_id']
+                        st.rerun()
+
+def show_course_browser(course_manager, ai_engine):
+    """Display course browser with filtering and search"""
+    st.title("📚 Browse Courses")
+    
+    # Search and filters
+    col1, col2, col3 = st.columns([2, 1, 1])
+    
+    with col1:
+        search_query = st.text_input("Search courses...", placeholder="Enter keywords")
     
     with col2:
-        if st.button("📄 Export Data as CSV"):
-            if st.session_state.filtered_data is not None:
-                csv = st.session_state.filtered_data.to_csv(index=False)
-                st.download_button(
-                    label="💾 Download CSV",
-                    data=csv,
-                    file_name="filtered_data.csv",
-                    mime="text/csv"
-                )
+        category_filter = st.selectbox(
+            "Category",
+            ["All"] + course_manager.get_categories()
+        )
     
-    # Share via team collaboration
-    st.write("### 👥 Team Collaboration")
-    st.info("""
-    **Share with your team:**
-    1. Copy the shareable link above
-    2. Send it to team members
-    3. They can view the same visualization with the current data filters
-    4. Export options are available for offline analysis
-    """)
+    with col3:
+        difficulty_filter = st.selectbox(
+            "Difficulty",
+            ["All", "Beginner", "Intermediate", "Advanced"]
+        )
+    
+    # Get filtered courses
+    courses = course_manager.search_courses(search_query, category_filter, difficulty_filter)
+    
+    # Display courses
+    if courses:
+        for i in range(0, len(courses), 2):
+            cols = st.columns(2)
+            
+            for j, col in enumerate(cols):
+                if i + j < len(courses):
+                    course = courses[i + j]
+                    
+                    with col:
+                        with st.container():
+                            st.subheader(course['title'])
+                            st.write(f"**Category:** {course['category']}")
+                            st.write(f"**Difficulty:** {course['difficulty']}")
+                            st.write(f"**Duration:** {course['estimated_hours']} hours")
+                            st.write(f"**Rating:** {'⭐' * int(course.get('rating', 0))} ({course.get('rating', 0)}/5)")
+                            
+                            st.write(course['description'])
+                            
+                            col_a, col_b = st.columns(2)
+                            with col_a:
+                                if st.button("View Details", key=f"view_details_{course['course_id']}"):
+                                    show_course_details(course, course_manager)
+                            
+                            with col_b:
+                                if st.button("Enroll", key=f"enroll_{course['course_id']}", type="primary"):
+                                    enroll_in_course(course['course_id'], course_manager)
+    else:
+        st.info("No courses found matching your criteria.")
+
+def show_course_details(course, course_manager):
+    """Display detailed course information"""
+    with st.expander(f"📚 Course Details: {course['title']}", expanded=True):
+        st.write(f"**Description:** {course['description']}")
+        st.write(f"**Category:** {course['category']}")
+        st.write(f"**Difficulty Level:** {course['difficulty']}")
+        st.write(f"**Estimated Duration:** {course['estimated_hours']} hours")
+        
+        # Course curriculum
+        st.subheader("📋 Course Curriculum")
+        lessons = course_manager.get_course_lessons(course['course_id'])
+        
+        for i, lesson in enumerate(lessons, 1):
+            st.write(f"{i}. {lesson['title']} ({lesson['duration_minutes']} min)")
+        
+        # Prerequisites
+        if course.get('prerequisites'):
+            st.subheader("📚 Prerequisites")
+            for prereq in course['prerequisites']:
+                st.write(f"• {prereq}")
+        
+        # Learning outcomes
+        if course.get('learning_outcomes'):
+            st.subheader("🎯 Learning Outcomes")
+            for outcome in course['learning_outcomes']:
+                st.write(f"• {outcome}")
+
+def enroll_in_course(course_id, course_manager):
+    """Enroll user in a course"""
+    user = st.session_state.user
+    
+    if course_manager.enroll_user(user['user_id'], course_id):
+        st.success("Successfully enrolled in the course!")
+        st.rerun()
+    else:
+        st.error("Failed to enroll. You may already be enrolled in this course.")
+
+def show_my_learning(course_manager, progress_tracker):
+    """Display user's enrolled courses and progress"""
+    st.title("📖 My Learning")
+    
+    user = st.session_state.user
+    user_progress = progress_tracker.get_user_progress(user['user_id'])
+    enrolled_courses = user_progress.get('enrolled_courses', [])
+    
+    if not enrolled_courses:
+        st.info("You haven't enrolled in any courses yet. Browse courses to get started!")
+        return
+    
+    # Display enrolled courses
+    for course_id in enrolled_courses:
+        course = course_manager.get_course(course_id)
+        if course:
+            with st.expander(f"📚 {course['title']}", expanded=True):
+                col1, col2 = st.columns([2, 1])
+                
+                with col1:
+                    course_progress = user_progress.get('course_progress', {}).get(course_id, 0)
+                    st.progress(course_progress / 100)
+                    st.write(f"Progress: {course_progress}%")
+                    
+                    # Display lessons
+                    lessons = course_manager.get_course_lessons(course_id)
+                    completed_lessons = user_progress.get('completed_lessons_by_course', {}).get(course_id, [])
+                    
+                    for lesson in lessons:
+                        is_completed = lesson['lesson_id'] in completed_lessons
+                        status_icon = "✅" if is_completed else "⏳"
+                        
+                        col_a, col_b = st.columns([3, 1])
+                        with col_a:
+                            st.write(f"{status_icon} {lesson['title']}")
+                        with col_b:
+                            if not is_completed:
+                                if st.button("Start", key=f"start_{lesson['lesson_id']}"):
+                                    start_lesson(lesson, course_id, progress_tracker)
+                            else:
+                                st.write("✓ Done")
+                
+                with col2:
+                    st.metric("Lessons Completed", f"{len(completed_lessons)}/{len(lessons)}")
+                    
+                    time_spent = user_progress.get('time_spent_by_course', {}).get(course_id, 0)
+                    st.metric("Time Spent", f"{time_spent} min")
+
+def start_lesson(lesson, course_id, progress_tracker):
+    """Start a lesson"""
+    st.session_state.current_lesson = lesson
+    st.session_state.current_course = course_id
+    
+    # Display lesson content
+    st.subheader(f"📝 {lesson['title']}")
+    
+    # Lesson content (this would typically be rich content)
+    st.write(lesson.get('content', 'Lesson content would be displayed here.'))
+    
+    # Mark as completed
+    if st.button("Mark as Completed", type="primary"):
+        progress_tracker.complete_lesson(
+            st.session_state.user['user_id'],
+            course_id,
+            lesson['lesson_id']
+        )
+        st.success("Lesson completed! Great job!")
+        st.rerun()
+
+def show_ai_recommendations(ai_engine, course_manager):
+    """Display AI-powered course recommendations"""
+    st.title("🤖 AI-Powered Recommendations")
+    
+    user = st.session_state.user
+    preferences = st.session_state.learning_preferences
+    
+    # Get personalized recommendations
+    recommendations = ai_engine.get_personalized_recommendations(user['user_id'], preferences)
+    
+    if recommendations:
+        st.subheader("Recommended for You")
+        
+        for rec in recommendations:
+            course = course_manager.get_course(rec['course_id'])
+            if course:
+                with st.container():
+                    col1, col2 = st.columns([3, 1])
+                    
+                    with col1:
+                        st.write(f"### {course['title']}")
+                        st.write(f"**Match Score:** {rec['confidence']:.0%}")
+                        st.write(f"**Reason:** {rec['reason']}")
+                        st.write(course['description'])
+                        
+                        # Tags
+                        if course.get('tags'):
+                            tag_text = " ".join([f"`{tag}`" for tag in course['tags']])
+                            st.markdown(tag_text)
+                    
+                    with col2:
+                        st.write(f"**Difficulty:** {course['difficulty']}")
+                        st.write(f"**Duration:** {course['estimated_hours']} hours")
+                        
+                        if st.button(f"Enroll Now", key=f"ai_enroll_{course['course_id']}", type="primary"):
+                            enroll_in_course(course['course_id'], course_manager)
+                
+                st.divider()
+    else:
+        st.info("No recommendations available. Try updating your learning preferences in Settings.")
+
+def show_quizzes(quiz_generator, course_manager):
+    """Display quiz interface"""
+    st.title("🧠 Quizzes & Assessments")
+    
+    user = st.session_state.user
+    
+    # Quiz options
+    tab1, tab2 = st.tabs(["Take Quiz", "Quiz History"])
+    
+    with tab1:
+        st.subheader("Generate AI Quiz")
+        
+        # Quiz configuration
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            topic = st.text_input("Quiz Topic", placeholder="e.g., Python basics, Machine Learning")
+            difficulty = st.selectbox("Difficulty Level", ["Beginner", "Intermediate", "Advanced"])
+        
+        with col2:
+            num_questions = st.slider("Number of Questions", 5, 20, 10)
+            quiz_type = st.selectbox("Quiz Type", ["Multiple Choice", "True/False", "Mixed"])
+        
+        if st.button("Generate Quiz", type="primary"):
+            if topic:
+                with st.spinner("Generating quiz questions..."):
+                    quiz = quiz_generator.generate_quiz(topic, difficulty, num_questions, quiz_type)
+                    
+                    if quiz:
+                        st.session_state.current_quiz = quiz
+                        st.success("Quiz generated successfully!")
+                        show_quiz_interface(quiz, quiz_generator)
+                    else:
+                        st.error("Failed to generate quiz. Please try again or check your topic.")
+            else:
+                st.warning("Please enter a quiz topic.")
+    
+    with tab2:
+        st.subheader("Your Quiz History")
+        
+        quiz_history = quiz_generator.get_user_quiz_history(user['user_id'])
+        
+        if quiz_history:
+            for quiz_record in quiz_history:
+                with st.expander(f"Quiz: {quiz_record['topic']} - Score: {quiz_record['score']}%"):
+                    st.write(f"**Date:** {quiz_record['date']}")
+                    st.write(f"**Questions:** {quiz_record['total_questions']}")
+                    st.write(f"**Correct:** {quiz_record['correct_answers']}")
+                    st.write(f"**Time Taken:** {quiz_record['time_taken']} minutes")
+        else:
+            st.info("No quiz history available. Take your first quiz above!")
+
+def show_quiz_interface(quiz, quiz_generator):
+    """Display quiz taking interface"""
+    st.subheader(f"Quiz: {quiz['topic']}")
+    
+    if 'quiz_answers' not in st.session_state:
+        st.session_state.quiz_answers = {}
+    
+    # Display questions
+    for i, question in enumerate(quiz['questions']):
+        st.write(f"**Question {i+1}:** {question['question']}")
+        
+        if question['type'] == 'multiple_choice':
+            answer = st.radio(
+                f"Select your answer:",
+                question['options'],
+                key=f"q_{i}",
+                index=None
+            )
+            st.session_state.quiz_answers[i] = answer
+            
+        elif question['type'] == 'true_false':
+            answer = st.radio(
+                f"True or False?",
+                ["True", "False"],
+                key=f"q_{i}",
+                index=None
+            )
+            st.session_state.quiz_answers[i] = answer
+        
+        st.divider()
+    
+    # Submit quiz
+    if st.button("Submit Quiz", type="primary"):
+        score = quiz_generator.calculate_score(quiz, st.session_state.quiz_answers)
+        
+        st.success(f"Quiz completed! Your score: {score['percentage']}%")
+        st.write(f"Correct answers: {score['correct']}/{score['total']}")
+        
+        # Save quiz result
+        quiz_generator.save_quiz_result(
+            st.session_state.user['user_id'],
+            quiz,
+            st.session_state.quiz_answers,
+            score
+        )
+        
+        # Clear quiz state
+        del st.session_state.current_quiz
+        del st.session_state.quiz_answers
+
+def show_progress_tracking(progress_tracker):
+    """Display progress tracking and analytics"""
+    st.title("📈 Progress Tracking")
+    
+    user = st.session_state.user
+    progress_data = progress_tracker.get_detailed_progress(user['user_id'])
+    
+    # Progress overview
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.metric("Total Study Time", f"{progress_data.get('total_minutes', 0)} min")
+    
+    with col2:
+        st.metric("Courses Completed", progress_data.get('completed_courses', 0))
+    
+    with col3:
+        st.metric("Current Streak", f"{progress_data.get('streak_days', 0)} days")
+    
+    with col4:
+        st.metric("Achievement Points", progress_data.get('total_points', 0))
+    
+    # Progress charts
+    tab1, tab2, tab3 = st.tabs(["Learning Trends", "Course Progress", "Achievements"])
+    
+    with tab1:
+        st.subheader("📊 Learning Trends")
+        
+        # Daily study time chart
+        if progress_data.get('daily_study_time'):
+            dates = list(progress_data['daily_study_time'].keys())
+            times = list(progress_data['daily_study_time'].values())
+            
+            chart_data = pd.DataFrame({
+                'Date': pd.to_datetime(dates),
+                'Study Time (minutes)': times
+            })
+            
+            st.line_chart(chart_data.set_index('Date'))
+        else:
+            st.info("Start learning to see your progress trends!")
+    
+    with tab2:
+        st.subheader("📚 Course Progress")
+        
+        course_progress = progress_data.get('course_progress', {})
+        if course_progress:
+            for course_id, progress in course_progress.items():
+                course_manager = CourseManager()
+                course = course_manager.get_course(course_id)
+                if course:
+                    st.write(f"**{course['title']}**")
+                    st.progress(progress / 100)
+                    st.write(f"{progress}% completed")
+        else:
+            st.info("Enroll in courses to track your progress!")
+    
+    with tab3:
+        st.subheader("🏆 Achievements")
+        
+        achievements = progress_data.get('achievements', [])
+        if achievements:
+            for achievement in achievements:
+                with st.container():
+                    col1, col2 = st.columns([1, 4])
+                    with col1:
+                        st.write(achievement['icon'])
+                    with col2:
+                        st.write(f"**{achievement['title']}**")
+                        st.write(achievement['description'])
+                        st.write(f"Earned: {achievement['date']}")
+        else:
+            st.info("Keep learning to earn achievements!")
+
+def show_settings(auth_manager):
+    """Display user settings and preferences"""
+    st.title("⚙️ Settings")
+    
+    user = st.session_state.user
+    
+    tab1, tab2, tab3 = st.tabs(["Learning Preferences", "Account Settings", "Notifications"])
+    
+    with tab1:
+        st.subheader("🎯 Learning Preferences")
+        
+        with st.form("preferences_form"):
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                learning_style = st.selectbox(
+                    "Learning Style",
+                    ["Visual", "Auditory", "Kinesthetic", "Reading/Writing"],
+                    index=["Visual", "Auditory", "Kinesthetic", "Reading/Writing"].index(
+                        st.session_state.learning_preferences.get('learning_style', 'Visual')
+                    )
+                )
+                
+                difficulty_preference = st.selectbox(
+                    "Preferred Difficulty",
+                    ["Beginner", "Intermediate", "Advanced", "Mixed"],
+                    index=["Beginner", "Intermediate", "Advanced", "Mixed"].index(
+                        st.session_state.learning_preferences.get('difficulty_preference', 'Beginner')
+                    )
+                )
+            
+            with col2:
+                study_time = st.selectbox(
+                    "Daily Study Time",
+                    ["15-30 minutes", "30-60 minutes", "1-2 hours", "2+ hours"],
+                    index=["15-30 minutes", "30-60 minutes", "1-2 hours", "2+ hours"].index(
+                        st.session_state.learning_preferences.get('study_time', '30-60 minutes')
+                    )
+                )
+                
+                interests = st.multiselect(
+                    "Subject Interests",
+                    ["Technology", "Science", "Mathematics", "Languages", "Business", "Arts", "History"],
+                    default=st.session_state.learning_preferences.get('interests', [])
+                )
+            
+            daily_goal = st.slider(
+                "Daily Study Goal (minutes)",
+                15, 180, 
+                st.session_state.learning_preferences.get('daily_goal_minutes', 30),
+                step=15
+            )
+            
+            if st.form_submit_button("Save Preferences", type="primary"):
+                new_preferences = {
+                    'learning_style': learning_style,
+                    'difficulty_preference': difficulty_preference,
+                    'study_time': study_time,
+                    'interests': interests,
+                    'daily_goal_minutes': daily_goal
+                }
+                
+                if auth_manager.update_user_preferences(user['user_id'], new_preferences):
+                    st.session_state.learning_preferences = new_preferences
+                    st.success("Preferences updated successfully!")
+                else:
+                    st.error("Failed to update preferences.")
+    
+    with tab2:
+        st.subheader("👤 Account Settings")
+        
+        with st.form("account_form"):
+            new_email = st.text_input("Email", value=user.get('email', ''))
+            
+            st.write("**Change Password**")
+            current_password = st.text_input("Current Password", type="password")
+            new_password = st.text_input("New Password", type="password")
+            confirm_new_password = st.text_input("Confirm New Password", type="password")
+            
+            if st.form_submit_button("Update Account", type="primary"):
+                if new_password and new_password != confirm_new_password:
+                    st.error("New passwords do not match")
+                elif new_password and len(new_password) < 6:
+                    st.error("Password must be at least 6 characters")
+                else:
+                    if auth_manager.update_user_account(user['user_id'], new_email, current_password, new_password):
+                        st.success("Account updated successfully!")
+                    else:
+                        st.error("Failed to update account. Check your current password.")
+    
+    with tab3:
+        st.subheader("🔔 Notification Settings")
+        
+        with st.form("notifications_form"):
+            email_notifications = st.checkbox("Email Notifications", value=True)
+            daily_reminders = st.checkbox("Daily Study Reminders", value=True)
+            achievement_alerts = st.checkbox("Achievement Notifications", value=True)
+            course_updates = st.checkbox("Course Update Notifications", value=True)
+            
+            reminder_time = st.time_input("Daily Reminder Time", value=datetime.strptime("18:00", "%H:%M").time())
+            
+            if st.form_submit_button("Save Notification Settings", type="primary"):
+                notification_settings = {
+                    'email_notifications': email_notifications,
+                    'daily_reminders': daily_reminders,
+                    'achievement_alerts': achievement_alerts,
+                    'course_updates': course_updates,
+                    'reminder_time': reminder_time.strftime("%H:%M")
+                }
+                
+                st.success("Notification settings saved!")
 
 if __name__ == "__main__":
     main()

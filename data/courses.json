@@ -1,0 +1,290 @@
+{
+  "b384384c-eb87-4688-a18e-3d5cb24df547": {
+    "course_id": "b384384c-eb87-4688-a18e-3d5cb24df547",
+    "title": "Python Programming Fundamentals",
+    "description": "Learn the basics of Python programming including variables, functions, loops, and data structures. Perfect for beginners starting their coding journey.",
+    "category": "Technology",
+    "difficulty": "Beginner",
+    "estimated_hours": 20,
+    "rating": 4.5,
+    "instructor": "Dr. Sarah Johnson",
+    "tags": [
+      "python",
+      "programming",
+      "coding",
+      "fundamentals"
+    ],
+    "prerequisites": [],
+    "learning_outcomes": [
+      "Understand Python syntax and basic programming concepts",
+      "Write simple Python programs",
+      "Work with data types and variables",
+      "Create functions and use loops"
+    ],
+    "created_at": "2025-05-31T17:31:32.684002",
+    "lessons": [
+      {
+        "lesson_id": "aaa16735-464d-4b43-a493-a23b1607e9f3",
+        "title": "Introduction to Python",
+        "duration_minutes": 30,
+        "content": "Learn what Python is and why it's popular."
+      },
+      {
+        "lesson_id": "8759f9e2-da92-4dfb-b9e2-5e64e987d253",
+        "title": "Variables and Data Types",
+        "duration_minutes": 45,
+        "content": "Understanding different data types in Python."
+      },
+      {
+        "lesson_id": "0da84efb-2c56-4853-a6ed-2d68818f9570",
+        "title": "Control Structures",
+        "duration_minutes": 60,
+        "content": "If statements, loops, and control flow."
+      },
+      {
+        "lesson_id": "90993b07-7dd8-4265-b3c0-5b42129c8c88",
+        "title": "Functions",
+        "duration_minutes": 50,
+        "content": "Creating and using functions in Python."
+      },
+      {
+        "lesson_id": "dbf6b166-7507-4c04-8d27-8be8393e296c",
+        "title": "Data Structures",
+        "duration_minutes": 70,
+        "content": "Lists, dictionaries, and sets."
+      }
+    ]
+  },
+  "8471f800-1c52-4bd7-ae3f-f6db44e1d53a": {
+    "course_id": "8471f800-1c52-4bd7-ae3f-f6db44e1d53a",
+    "title": "Data Science with Python",
+    "description": "Comprehensive course covering data analysis, visualization, and machine learning using Python libraries like pandas, numpy, and scikit-learn.",
+    "category": "Technology",
+    "difficulty": "Intermediate",
+    "estimated_hours": 40,
+    "rating": 4.7,
+    "instructor": "Prof. Michael Chen",
+    "tags": [
+      "data science",
+      "python",
+      "machine learning",
+      "analytics"
+    ],
+    "prerequisites": [
+      "Basic Python knowledge"
+    ],
+    "learning_outcomes": [
+      "Analyze and visualize data using pandas and matplotlib",
+      "Build machine learning models",
+      "Understand statistical concepts",
+      "Work with real-world datasets"
+    ],
+    "created_at": "2025-05-31T17:31:32.684025",
+    "lessons": [
+      {
+        "lesson_id": "9450f488-c3de-4122-a2e4-84392a689703",
+        "title": "Introduction to Data Science",
+        "duration_minutes": 40,
+        "content": "Overview of data science field."
+      },
+      {
+        "lesson_id": "a7d79613-ae32-4243-83c5-527439cc876c",
+        "title": "NumPy Fundamentals",
+        "duration_minutes": 55,
+        "content": "Working with numerical arrays."
+      },
+      {
+        "lesson_id": "1135b6ae-634a-465c-afcb-70d326ff14b4",
+        "title": "Pandas for Data Analysis",
+        "duration_minutes": 75,
+        "content": "Data manipulation and analysis."
+      },
+      {
+        "lesson_id": "4d34c7cb-e8de-47c8-adc2-3b18dbfdf32b",
+        "title": "Data Visualization",
+        "duration_minutes": 60,
+        "content": "Creating charts and graphs."
+      },
+      {
+        "lesson_id": "634e7646-d75a-4995-afeb-ab6157294652",
+        "title": "Statistical Analysis",
+        "duration_minutes": 80,
+        "content": "Statistical methods and hypothesis testing."
+      }
+    ]
+  },
+  "8c814926-cb06-4544-b026-ccfc8b207cb0": {
+    "course_id": "8c814926-cb06-4544-b026-ccfc8b207cb0",
+    "title": "Introduction to Machine Learning",
+    "description": "Explore the fundamentals of machine learning including supervised and unsupervised learning, neural networks, and practical applications.",
+    "category": "Technology",
+    "difficulty": "Intermediate",
+    "estimated_hours": 35,
+    "rating": 4.6,
+    "instructor": "Dr. Emily Rodriguez",
+    "tags": [
+      "machine learning",
+      "AI",
+      "algorithms",
+      "neural networks"
+    ],
+    "prerequisites": [
+      "Mathematics basics",
+      "Programming experience"
+    ],
+    "learning_outcomes": [
+      "Understand core ML algorithms",
+      "Implement classification and regression models",
+      "Evaluate model performance",
+      "Apply ML to real problems"
+    ],
+    "created_at": "2025-05-31T17:31:32.684037",
+    "lessons": [
+      {
+        "lesson_id": "c1dae25e-06d7-4b16-8e33-e2a90b05a089",
+        "title": "What is Machine Learning?",
+        "duration_minutes": 35,
+        "content": "Introduction to ML concepts."
+      },
+      {
+        "lesson_id": "b2aa4d36-fdab-459e-8fec-5da1350e19dd",
+        "title": "Supervised Learning",
+        "duration_minutes": 65,
+        "content": "Classification and regression algorithms."
+      },
+      {
+        "lesson_id": "49b089f6-e71c-4165-89e7-d6d27253a4e3",
+        "title": "Unsupervised Learning",
+        "duration_minutes": 55,
+        "content": "Clustering and dimensionality reduction."
+      },
+      {
+        "lesson_id": "0a2b8bfe-27f6-4029-895d-f8b9a7ad3a2f",
+        "title": "Model Evaluation",
+        "duration_minutes": 50,
+        "content": "Metrics and validation techniques."
+      },
+      {
+        "lesson_id": "fbd05f62-36a7-4cba-aed8-3a43f0ed63a5",
+        "title": "Neural Networks",
+        "duration_minutes": 70,
+        "content": "Introduction to deep learning."
+      }
+    ]
+  },
+  "ebc75876-31f9-4a7d-a3ed-f1ab7118fbb4": {
+    "course_id": "ebc75876-31f9-4a7d-a3ed-f1ab7118fbb4",
+    "title": "Digital Marketing Strategy",
+    "description": "Learn how to create effective digital marketing campaigns, understand SEO, social media marketing, and analytics.",
+    "category": "Business",
+    "difficulty": "Beginner",
+    "estimated_hours": 25,
+    "rating": 4.3,
+    "instructor": "Maria Lopez",
+    "tags": [
+      "marketing",
+      "digital",
+      "SEO",
+      "social media"
+    ],
+    "prerequisites": [],
+    "learning_outcomes": [
+      "Develop digital marketing strategies",
+      "Understand SEO principles",
+      "Create social media campaigns",
+      "Analyze marketing metrics"
+    ],
+    "created_at": "2025-05-31T17:31:32.684048",
+    "lessons": [
+      {
+        "lesson_id": "ebb621d5-0897-4c5a-8105-0fc9be4794b7",
+        "title": "Digital Marketing Overview",
+        "duration_minutes": 30,
+        "content": "Understanding digital marketing landscape."
+      },
+      {
+        "lesson_id": "317ee8bc-4fa6-4a38-bae3-bdf8de6a1153",
+        "title": "SEO Fundamentals",
+        "duration_minutes": 45,
+        "content": "Search engine optimization basics."
+      },
+      {
+        "lesson_id": "a76b1835-d0f7-4c94-86a8-036af012351d",
+        "title": "Social Media Marketing",
+        "duration_minutes": 40,
+        "content": "Leveraging social platforms."
+      },
+      {
+        "lesson_id": "0495a6e0-fd90-4677-84ed-99772630cc4e",
+        "title": "Content Marketing",
+        "duration_minutes": 50,
+        "content": "Creating engaging content."
+      },
+      {
+        "lesson_id": "98ac1c85-7831-4cf8-a8d3-10c0a1eadb7e",
+        "title": "Analytics and Metrics",
+        "duration_minutes": 35,
+        "content": "Measuring marketing success."
+      }
+    ]
+  },
+  "50cc57f8-fe93-4163-b8fe-5117a65e5e86": {
+    "course_id": "50cc57f8-fe93-4163-b8fe-5117a65e5e86",
+    "title": "Calculus I: Limits and Derivatives",
+    "description": "Foundation course in calculus covering limits, continuity, derivatives, and their applications in real-world problems.",
+    "category": "Mathematics",
+    "difficulty": "Intermediate",
+    "estimated_hours": 45,
+    "rating": 4.4,
+    "instructor": "Dr. Robert Kim",
+    "tags": [
+      "calculus",
+      "mathematics",
+      "derivatives",
+      "limits"
+    ],
+    "prerequisites": [
+      "Algebra",
+      "Pre-calculus"
+    ],
+    "learning_outcomes": [
+      "Understand limits and continuity",
+      "Calculate derivatives",
+      "Apply derivatives to optimization",
+      "Solve related rates problems"
+    ],
+    "created_at": "2025-05-31T17:31:32.684059",
+    "lessons": [
+      {
+        "lesson_id": "9d50efe4-6458-4f3d-b7e9-349146a9ef89",
+        "title": "Introduction to Limits",
+        "duration_minutes": 50,
+        "content": "Understanding the concept of limits."
+      },
+      {
+        "lesson_id": "0ee04d82-1a2d-4fa2-8a43-5554731a974f",
+        "title": "Limit Laws and Theorems",
+        "duration_minutes": 60,
+        "content": "Mathematical rules for limits."
+      },
+      {
+        "lesson_id": "96929c9a-2e79-42cb-82c3-8d325284cd73",
+        "title": "Continuity",
+        "duration_minutes": 45,
+        "content": "When functions are continuous."
+      },
+      {
+        "lesson_id": "17b8f349-fa09-4f76-ad8b-8b95d3db06d7",
+        "title": "Introduction to Derivatives",
+        "duration_minutes": 55,
+        "content": "The derivative concept."
+      },
+      {
+        "lesson_id": "5d701819-e4d2-4fde-8063-1a2a6833dc38",
+        "title": "Derivative Rules",
+        "duration_minutes": 70,
+        "content": "Power rule, product rule, chain rule."
+      }
+    ]
+  }
+}
