@@ -1,0 +1,112 @@
+{
+  "a2108241-9c15-488b-a313-21fb8ec2cff0": {
+    "quiz_id": "a2108241-9c15-488b-a313-21fb8ec2cff0",
+    "topic": "python basics",
+    "difficulty": "Intermediate",
+    "num_questions": 4,
+    "quiz_type": "Mixed",
+    "questions": [
+      {
+        "question": "What is Python primarily used for?",
+        "type": "true_false",
+        "options": [
+          "True",
+          "False"
+        ],
+        "correct_answer": "True",
+        "explanation": "Python is a versatile language used in many domains."
+      },
+      {
+        "question": "Which keyword is used to define a function in Python?",
+        "type": "multiple_choice",
+        "options": [
+          "function",
+          "def",
+          "define",
+          "func"
+        ],
+        "correct_answer": "def",
+        "explanation": "The 'def' keyword is used to define functions in Python."
+      },
+      {
+        "question": "Python is an interpreted language.",
+        "type": "true_false",
+        "options": [
+          "True",
+          "False"
+        ],
+        "correct_answer": "True",
+        "explanation": "Python code is executed line by line by the Python interpreter."
+      },
+      {
+        "question": "Lists in Python are mutable.",
+        "type": "multiple_choice",
+        "options": [
+          "A",
+          "B",
+          "C",
+          "D"
+        ],
+        "correct_answer": "A",
+        "explanation": "Lists can be modified after creation, making them mutable."
+      }
+    ],
+    "created_at": "2025-06-01T02:16:37.214603",
+    "generated_by": "template"
+  },
+  "ca5b1489-3223-494c-9726-478fab841d4f": {
+    "quiz_id": "ca5b1489-3223-494c-9726-478fab841d4f",
+    "topic": "python basics",
+    "difficulty": "Intermediate",
+    "num_questions": 4,
+    "quiz_type": "Mixed",
+    "questions": [
+      {
+        "question": "What is Python primarily used for?",
+        "type": "true_false",
+        "options": [
+          "True",
+          "False"
+        ],
+        "correct_answer": "True",
+        "explanation": "Python is a versatile language used in many domains."
+      },
+      {
+        "question": "Which keyword is used to define a function in Python?",
+        "type": "multiple_choice",
+        "options": [
+          "function",
+          "def",
+          "define",
+          "func"
+        ],
+        "correct_answer": "def",
+        "explanation": "The 'def' keyword is used to define functions in Python."
+      },
+      {
+        "question": "Python is an interpreted language.",
+        "type": "true_false",
+        "options": [
+          "True",
+          "False"
+        ],
+        "correct_answer": "True",
+        "explanation": "Python code is executed line by line by the Python interpreter."
+      },
+      {
+        "question": "Lists in Python are mutable.",
+        "type": "multiple_choice",
+        "options": [
+          "A",
+          "B",
+          "C",
+          "D"
+        ],
+        "correct_answer": "A",
+        "explanation": "Lists can be modified after creation, making them mutable."
+      }
+    ],
+    "created_at": "2025-06-01T02:17:02.073997",
+    "generated_by": "template"
+  }
+}
