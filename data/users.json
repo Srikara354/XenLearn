@@ -1,1 +1,15 @@
-{}
+{
+  "7557d565-3520-4871-beea-820cb53c85b4": {
+    "user_id": "7557d565-3520-4871-beea-820cb53c85b4",
+    "username": "Srikaraaa",
+    "email": "srikara354@gmail.com",
+    "password_hash": "147c40df5cd1807e353fb2fa9e467f87b3e8e449253110adaa63861ad6cf5001",
+    "preferences": {
+      "learning_style": "Visual",
+      "difficulty_preference": "Beginner",
+      "study_time": "15-30 minutes",
+      "interests": []
+    },
+    "created_at": "2025-06-04T15:46:21.808459"
+  }
+}
