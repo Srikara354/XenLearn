@@ -53,7 +53,11 @@ Install Dependencies 📦
 Configure Environment Variables 🔑
 
 Set up the following environment variables in a .env file or your deployment platform:
+
+
 DATABASE_URL: PostgreSQL connection string (optional, for database mode).
+
+
 OPENAI_API_KEY: API key for OpenAI integration.
 
 
@@ -83,9 +87,13 @@ Track Progress: Monitor your learning journey through detailed analytics and ach
 We welcome contributions to XenLearn! To contribute:
 
 Fork the repository.
+
 Create a feature branch (git checkout -b feature/your-feature).
+
 Commit your changes (git commit -m "Add your feature").
+
 Push to the branch (git push origin feature/your-feature).
+
 Open a pull request.
 
 
