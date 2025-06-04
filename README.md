@@ -5,18 +5,36 @@ XenLearn is a comprehensive platform that tailors learning paths to individual p
 ### Features ✨
 
 🔒 User Authentication: Secure account creation with customizable learning preferences.
+
+
 🧠 AI-Powered Recommendations: Intelligent course suggestions tailored to learning styles and interests.
+
+
 📝 Automatic Quiz Generation: Dynamic quizzes created using OpenAI for any topic.
+
+
 📊 Progress Tracking: In-depth analytics and achievement system to monitor learning progress.
+
+
 📚 Course Management: Robust course catalog supporting multiple subjects.
+
+
 📱 Mobile-Friendly: Responsive design optimized for seamless use across all devices.
+
+
 💾 Database Integration: Optional PostgreSQL for reliable data persistence, with file-based mode for flexibility.
 
 ### Technology Stack 🛠️
 
 Frontend: Streamlit for an intuitive and interactive user interface.
+
+
 Backend: Python for robust and scalable application logic.
+
+
 Database: PostgreSQL (optional) for efficient data management.
+
+
 AI Integration: OpenAI GPT-4 for intelligent recommendations and quiz generation.
 
 ### Setup Instructions ⚙️
@@ -41,24 +59,24 @@ OPENAI_API_KEY: API key for OpenAI integration.
 
 (Optional) Initialize Database 🗄️
 
-If using PostgreSQL, run the database setup script:python initialize_database.py
+If using PostgreSQL, run the database setup script:
+`python initialize_database.py`
 
 
 Run the Application 🚀
-streamlit run app.py
-
-
-### Access XenLearn 🌍
-
-Open your browser and navigate to http://localhost:8501 (or the URL provided by Replit).
-
-
+`streamlit run app.py`
 
 ### Usage 🖱️
 
 Sign Up/Login: Create an account or log in to access personalized learning features.
+
+
 Explore Courses: Browse the course catalog and receive AI-driven recommendations.
+
+
 Take Quizzes: Engage with dynamically generated quizzes to test your knowledge.
+
+
 Track Progress: Monitor your learning journey through detailed analytics and achievements.
 
 ### Contributing 🤝
